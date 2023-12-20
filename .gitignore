@@ -3,3 +3,5 @@
 */.out
 compile_commands.json
 ~/.vscode-root
+**/opencv
+**/opencv_contrib
