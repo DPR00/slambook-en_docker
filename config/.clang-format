@@ -1,0 +1,10 @@
+---
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 120
+UseTab: Never
+ContinuationIndentWidth: 4
+AccessModifierOffset: -2
+BinPackParameters: false
+SortIncludes: true
+NamespaceIndentation: All

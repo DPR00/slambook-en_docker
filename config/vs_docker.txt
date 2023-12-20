@@ -1,0 +1,24 @@
+{
+    /*-------------------- GLOBAL EDITOR CONFIGURATIONS -------------------------*/
+    "editor.formatOnType": false,
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+    /*----------------------------- C++ STUFF ----------------------------------*/
+    "C_Cpp.autocomplete": "disabled",
+    "C_Cpp.formatting": "disabled",
+    "C_Cpp.errorSquiggles": "disabled",
+    "C_Cpp.intelliSenseEngine": "disabled",
+    //clangd
+    // "clang-tidy.enabled": false,
+    "clangd.arguments": [
+        "--background-index",
+        "--clang-tidy",
+        "--header-insertion=never",
+        "--suggest-missing-includes",
+        "--compile-commands-dir=build/"
+    ],
+    "clangd.path": "/usr/bin/clangd-9",
+    "C_Cpp.clang_format_path": "/usr/bin/clang-format",
+    "editor.inlayHints.enabled": "off"
+}

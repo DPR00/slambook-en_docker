@@ -1,0 +1,5 @@
+**/build
+**/.clangf
+.out
+compile_commands.json
+~/.vscode-root
