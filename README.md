@@ -27,7 +27,7 @@ sudo ./runCnt.sh
 You can work in the container you've just created.
 I prefer to work in vs-code as root (not recommended, but I like it). If you hve docker in rootles mode, then it is not necessary to run vscode as root.
 
-If you like to try, run vscode as root:
+If you like to try (At your own risk), run vscode as root:
 ```
 sudo code --user-data-dir="~/.vscode-root"
 ```
