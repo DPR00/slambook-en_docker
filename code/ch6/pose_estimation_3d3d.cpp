@@ -16,7 +16,6 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <sophus/se3.hpp>
-#include <utility>
 
 using cv::DMatch;
 using cv::KeyPoint;
@@ -48,7 +47,7 @@ class VertexPose : public g2o::BaseVertex<6, Sophus::SE3d> {
     void oplusImpl(const double *update) override {
         Eigen::Matrix<double, 6, 1> update_eigen;
         update_eigen << update[0], update[1], update[2], update[3], update[4], update[5];
-        _estimate = Sophus::SE3d::exp(update_eigen) * _estimate;
+        _estimate = Sophus::SE3d::exp(update_eigen) * _estimate;  // T = exp(e^)* T -> update
     }
 
     bool read(std::istream &in) override{};
@@ -99,28 +98,28 @@ int main(int argc, char **argv) {
     vector<DMatch> matches;
 
     find_feature_matches(img_1, img_2, keypoints_1, keypoints_2, matches);
-    cout << "Total found" << matches.size() << " group matching points" << endl;
+    cout << "Total found " << matches.size() << " group matching points" << endl;
 
     // Create 3d points
     Mat depth1 = cv::imread(argv[3], cv::IMREAD_UNCHANGED);
-    Mat depth2 = cv::imread(argv[3], cv::IMREAD_UNCHANGED);
+    Mat depth2 = cv::imread(argv[4], cv::IMREAD_UNCHANGED);
     Mat k_intrinsics = (cv::Mat_<double>(3, 3) << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1);
     vector<cv::Point3f> pts1;
     vector<cv::Point3f> pts2;
 
     for (DMatch m : matches) {
         auto d1 = depth1.ptr<uint16_t>(int(keypoints_1[m.queryIdx].pt.y))[int(keypoints_1[m.queryIdx].pt.x)];
-        auto d2 = depth2.ptr<uint16_t>(int(keypoints_1[m.queryIdx].pt.y))[int(keypoints_1[m.queryIdx].pt.x)];
-        if (d1 == 0 || d2 == 0) continue;
+        auto d2 = depth2.ptr<uint16_t>(int(keypoints_2[m.trainIdx].pt.y))[int(keypoints_2[m.trainIdx].pt.x)];
+        if (d1 == 0 || d2 == 0) continue;  // bad depth
         cv::Point2d p1 = pixel2cam(keypoints_1[m.queryIdx].pt, k_intrinsics);
-        cv::Point2d p2 = pixel2cam(keypoints_2[m.queryIdx].pt, k_intrinsics);
-        float dd1 = float(d1) / 5000.0;
-        float dd2 = float(d2) / 5000.0;
+        cv::Point2d p2 = pixel2cam(keypoints_2[m.trainIdx].pt, k_intrinsics);
+        float dd1 = float(d1) / 5000.0;  // because of tum dataset
+        float dd2 = float(d2) / 5000.0;  // because of tum dataset
         pts1.emplace_back(cv::Point3f(p1.x * dd1, p1.y * dd1, dd1));
         pts2.emplace_back(cv::Point3f(p2.x * dd2, p2.y * dd2, dd2));
     }
 
-    cout << "3d-3e pairs: " << pts1.size() << endl;
+    cout << "3d-3d pairs: " << pts1.size() << endl;
     Mat rot;
     Mat t;
     pose_estimation_3d3d(pts1, pts2, rot, t);
@@ -130,7 +129,7 @@ int main(int argc, char **argv) {
     cout << "R_inv = " << rot.t() << endl;
     cout << "t_inv = " << -rot.t() << endl;
 
-    cout << "calling vundle adjustment" << endl;
+    cout << "calling bundle adjustment" << endl;
 
     bundleAdjustment(pts1, pts2, rot, t);
 
@@ -203,14 +202,15 @@ cv::Point2d pixel2cam(const cv::Point2d &p, const Mat &K) {
 void pose_estimation_3d3d(const vector<cv::Point3f> &pts1, const vector<cv::Point3f> &pts2, Mat &R, Mat &t) {
     cv::Point3f p1;
     cv::Point3f p2;
+    // Calculate mean
     int n_pts1 = pts1.size();
     for (int i = 0; i < n_pts1; i++) {
         p1 += pts1[i];
         p2 += pts2[i];
     }
-
     p1 = cv::Point3f(cv::Vec3f(p1) / n_pts1);
     p2 = cv::Point3f(cv::Vec3f(p2) / n_pts1);
+
     vector<cv::Point3f> q1(n_pts1);
     vector<cv::Point3f> q2(n_pts1);
     for (int i = 0; i < n_pts1; i++) {
@@ -221,12 +221,13 @@ void pose_estimation_3d3d(const vector<cv::Point3f> &pts1, const vector<cv::Poin
     // compute q1*q2^T
     Eigen::Matrix3d w = Eigen::Matrix3d::Zero();
     for (int i = 0; i < n_pts1; i++) {
-        w += Eigen::Vector3d(q1[i].x, q1[i].y, q1[i].z) * Eigen::Vector3d(q2[i].x, q2[i].y, q2[i].z).transpose();
+        // W = sum(1,n) qi*qi'^T
+        w += Eigen::Vector3d(q1[i].x, q1[i].y, q1[i].z) * (Eigen::Vector3d(q2[i].x, q2[i].y, q2[i].z).transpose());
     }
 
     cout << "W= " << w << endl;
 
-    // SVD on w
+    // Performing SVD decomposition on w
     Eigen::JacobiSVD<Eigen::Matrix3d> svd(w, Eigen::ComputeFullU | Eigen::ComputeFullV);
     const Eigen::Matrix3d &u_svd = svd.matrixU();
     Eigen::Matrix3d v_svd = svd.matrixV();

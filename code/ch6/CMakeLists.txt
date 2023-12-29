@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(VO1)
 
+set(CMAKE_BUILD_TYPE "Release")
+add_definitions("-DENABLE_SSE")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "-std=c++17 -O2 ${SSE_FLAGS} -msse4")
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -29,9 +31,9 @@ add_executable(triangulation triangulation.cpp)
 target_link_libraries(triangulation ${OpenCV_LIBS})
 
 add_executable(pose_estimation_3d2d pose_estimation_3d2d.cpp)
-target_link_libraries(pose_estimation_3d2d g2o_core g2o_stuff Sophus::Sophus ${OpenCV_LIBS})
+target_link_libraries(pose_estimation_3d2d ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY} Sophus::Sophus ${OpenCV_LIBS})
 
 add_executable(pose_estimation_3d3d pose_estimation_3d3d.cpp)
 target_link_libraries(pose_estimation_3d3d
-        g2o_core g2o_stuff
+        ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY}
         ${OpenCV_LIBS})
